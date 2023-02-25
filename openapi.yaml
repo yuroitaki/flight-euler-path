@@ -1,0 +1,74 @@
+openapi: 3.0.0
+info:
+  title: Flight Itinerary Service
+  description: A service that calculates the origin and destination when given a list of flight paths
+  version: 0.1.0
+paths:
+  /compute:
+    post:
+      summary: Calculate flight path
+      description: Calculates the origin and destination when given a list of flight paths
+      requestBody:
+        description: A list of flight paths
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FlightPaths"
+      responses:
+        "200":
+          description: Origin and destination successfully calculated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Itinerary"
+        "400":
+          description: Flight paths input provided by user are invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+            text/plain:
+              schema:
+                type: string
+                example: "Failed to deserialize the JSON body into the target type"
+        "500":
+          description: There was some internal error when processing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        errorMessage:
+          type: string
+      required: ["errorMessage"]
+    FlightPaths:
+      type: object
+      properties:
+        flightPaths:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+            minLength: 2
+            maxLength: 2
+            example: ["SFO", "EWR"]
+          minLength: 1
+      required: ["flightPaths"]
+    Itinerary:
+      type: object
+      properties:
+        itinerary:
+          type: array
+          items:
+            type: string
+          minLength: 2
+          maxLength: 2
+          example: ["SFO", "EWR"]
+      required: ["itinerary"]

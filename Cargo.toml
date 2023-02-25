@@ -1,0 +1,21 @@
+[package]
+name = "flight-itinerary"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = "0.5.17"
+eyre = "0.6.8"
+log = "0.4.6"
+petgraph = "0.6.3"
+reqwest = "0.11.10"
+serde = { version = "1.0.147", features = ["derive"] }
+serde_json = { version = "1.0.87", features = ["arbitrary_precision", "raw_value"] }
+serde_yaml = "0.8.23"
+simple_logger = "4.0.0"
+structopt = "0.3.26"
+tokio = { version = "1.21.2", features = ["full"] }
+tower = "0.4.13"
+tower-http = { version = "0.3.4", features = ["catch-panic"] }
