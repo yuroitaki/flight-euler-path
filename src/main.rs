@@ -12,7 +12,7 @@ use util::parse_config_file;
 
 use eyre::Result;
 use log::Level;
-use std::{sync::Arc, str::FromStr};
+use std::{str::FromStr, sync::Arc};
 use structopt::StructOpt;
 
 #[tokio::main]
@@ -26,6 +26,6 @@ async fn main() -> Result<()> {
 
     let flight_itinerary_service = Arc::new(FlightItineraryService::new());
     start_server(config, flight_itinerary_service).await?;
-    
+
     Ok(())
 }

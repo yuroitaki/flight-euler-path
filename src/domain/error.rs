@@ -1,8 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{
-    error::Error,
-    fmt,
-};
+use std::{error::Error, fmt};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

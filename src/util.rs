@@ -12,7 +12,7 @@ mod test {
 
     use crate::properties::FlightItineraryServiceProperties;
 
-    use super::{Result, parse_config_file};
+    use super::{parse_config_file, Result};
 
     #[test]
     fn test_parse_config_file() {

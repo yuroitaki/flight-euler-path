@@ -5,7 +5,7 @@ use crate::domain::{
 
 use eyre::Result;
 use log::{error, info};
-use petgraph::{Direction, prelude::DiGraphMap};
+use petgraph::{prelude::DiGraphMap, Direction};
 
 pub struct FlightItineraryService {}
 
@@ -17,55 +17,49 @@ impl FlightItineraryService {
     // validate payload to ensure it is valid to be processed
     fn check_payload(&self, payload: &FlightItineraryRequest) -> Result<(), ApiError> {
         if payload.flight_paths.is_empty() {
-            let error_message = "Flight paths given is empty, please provide one with valid values.".to_string();
+            let error_message =
+                "Flight paths given is empty, please provide one with valid values.".to_string();
             error!("{error_message}");
-            return Err(
-                ApiError::EmptyFlightPaths(
-                    ErrorBody {
-                        error_message
-                    }
-                )
-            );
+            return Err(ApiError::EmptyFlightPaths(ErrorBody { error_message }));
         }
-        if payload.flight_paths
+        if payload
+            .flight_paths
             .iter()
-            .any(|[origin, desti]| origin.to_lowercase() == desti.to_lowercase()) {
-                let error_message = "Some of the flight paths given has the same origin and destination airports, which is not valid.".to_string();
-                error!("{error_message}");
-                return Err(
-                    ApiError::InvalidFlightPath(
-                        ErrorBody {
-                            error_message
-                        }
-                    )
-                );
-            }
+            .any(|[origin, desti]| origin.to_lowercase() == desti.to_lowercase())
+        {
+            let error_message = "Some of the flight paths given has the same origin and destination airports, which is not valid.".to_string();
+            error!("{error_message}");
+            return Err(ApiError::InvalidFlightPath(ErrorBody { error_message }));
+        }
 
         Ok(())
-    }   
+    }
 
-    pub async fn calculate(&self, payload: FlightItineraryRequest) -> Result<FlightItineraryResponse, ApiError> {
-        info!("Received request to calculate flight itinerary: {:?}", payload);
+    pub async fn calculate(
+        &self,
+        payload: FlightItineraryRequest,
+    ) -> Result<FlightItineraryResponse, ApiError> {
+        info!(
+            "Received request to calculate flight itinerary: {:?}",
+            payload
+        );
 
         self.check_payload(&payload)?;
-        
+
         // convert payload into a format that can be used to build a graph
         let flight_paths: Vec<(&str, &str)> = payload
             .flight_paths
             .iter()
-            .map(|[origin, desti]| {
-                (&origin[..], &desti[..])
-            })
+            .map(|[origin, desti]| (&origin[..], &desti[..]))
             .collect();
-        
 
         // build a directed graph
         let flight_graph = DiGraphMap::<&str, ()>::from_edges(&flight_paths);
-        
+
         // placeholder for the output we are looking for
         let mut origin: Option<&str> = None;
         let mut desti: Option<&str> = None;
-    
+
         // iterate through each node and calculate its in-degree and out-degree
         // given that we assume the input will form a graph with Eulerian path
         // the origin is the only node with (out-degree - in-degree) = 1
@@ -86,10 +80,10 @@ impl FlightItineraryService {
                         let error_message = "Failed to calculate the starting airport — more than 1 potential starting airport found, possibly because the flight paths don't form a single connected path.".to_string();
                         error!("{error_message}");
                         return Err(ApiError::NoStartingAirportDiscovered(ErrorBody {
-                            error_message
-                        }))
+                            error_message,
+                        }));
                     }
-                },
+                }
                 -1 => {
                     if desti.is_none() {
                         desti = Some(node);
@@ -97,17 +91,15 @@ impl FlightItineraryService {
                         let error_message = "Failed to calculate the ending airport — more than 1 potential ending airport found, possibly because the flight paths don't form a single connected path.".to_string();
                         error!("{error_message}");
                         return Err(ApiError::NoEndingAirportDiscovered(ErrorBody {
-                            error_message
-                        }))
+                            error_message,
+                        }));
                     }
                 }
                 0 => (),
                 _ => {
                     let error_message = "Failed to calculate the starting/ending airport — some non starting/ending airport has invalid paths from them".to_string();
-                        error!("{error_message}");
-                        return Err(ApiError::InvalidFlightPath(ErrorBody {
-                            error_message
-                        }))
+                    error!("{error_message}");
+                    return Err(ApiError::InvalidFlightPath(ErrorBody { error_message }));
                 }
             }
         }
@@ -117,8 +109,8 @@ impl FlightItineraryService {
                 let error_message = "Failed to calculate the starting airport — possibly due to the starting and ending airport being the same, or the flight paths don't form a single connected path.".to_string();
                 error!("{error_message}");
                 return Err(ApiError::NoStartingAirportDiscovered(ErrorBody {
-                    error_message
-                }))
+                    error_message,
+                }));
             }
         };
         let ending_airport = match desti {
@@ -127,12 +119,15 @@ impl FlightItineraryService {
                 let error_message = "Failed to calculate the ending airport — possibly due to the starting and ending airport being the same, or the flight paths don't form a single connected path.".to_string();
                 error!("{error_message}");
                 return Err(ApiError::NoEndingAirportDiscovered(ErrorBody {
-                    error_message
-                }))
+                    error_message,
+                }));
             }
         };
 
-        info!("Successfully discovered starting airport: {} and ending airport: {}!", starting_airport, ending_airport);
+        info!(
+            "Successfully discovered starting airport: {} and ending airport: {}!",
+            starting_airport, ending_airport
+        );
         let itinerary = vec![starting_airport.to_string(), ending_airport.to_string()];
         Ok(FlightItineraryResponse { itinerary })
     }
@@ -142,19 +137,16 @@ impl FlightItineraryService {
 mod test {
     use crate::domain::error::ApiError;
 
-    use super::{
-        FlightItineraryRequest,
-        FlightItineraryService,
-        Result
-    };
+    use super::{FlightItineraryRequest, FlightItineraryService, Result};
 
     #[test]
     fn test_check_payload_with_valid_input() {
         let service = FlightItineraryService::new();
         let payload = FlightItineraryRequest {
             flight_paths: vec![
-                ["A".to_string(), "B".to_string()], ["B".to_string(), "C".to_string()]
-            ]
+                ["A".to_string(), "B".to_string()],
+                ["B".to_string(), "C".to_string()],
+            ],
         };
         assert!(
             service.check_payload(&payload).is_ok(),
@@ -166,13 +158,10 @@ mod test {
     fn test_check_payload_with_empty_input() {
         let service = FlightItineraryService::new();
         let payload = FlightItineraryRequest {
-            flight_paths: vec![]
+            flight_paths: vec![],
         };
         let result = service.check_payload(&payload);
-        assert!(
-            result.is_err(),
-            "Failed to catch empty input."
-        );
+        assert!(result.is_err(), "Failed to catch empty input.");
     }
 
     #[test]
@@ -180,29 +169,22 @@ mod test {
         let service = FlightItineraryService::new();
         let payload = FlightItineraryRequest {
             flight_paths: vec![
-                ["A".to_string(), "A".to_string()], ["B".to_string(), "C".to_string()]
-            ]
+                ["A".to_string(), "A".to_string()],
+                ["B".to_string(), "C".to_string()],
+            ],
         };
         let result = service.check_payload(&payload);
-        assert!(
-            result.is_err(),
-            "Failed to catch duplicated input."
-        );
+        assert!(result.is_err(), "Failed to catch duplicated input.");
     }
 
     #[tokio::test]
     async fn test_calculate_with_simple_payload() -> Result<(), ApiError> {
         let service = FlightItineraryService::new();
         let payload = FlightItineraryRequest {
-            flight_paths: vec![
-                ["GBB".to_string(), "SGP".to_string()]
-            ]
+            flight_paths: vec![["GBB".to_string(), "SGP".to_string()]],
         };
         let result = service.calculate(payload).await?;
-        assert_eq!(
-            result.itinerary,
-            vec!["GBB".to_string(), "SGP".to_string()]
-        );
+        assert_eq!(result.itinerary, vec!["GBB".to_string(), "SGP".to_string()]);
         Ok(())
     }
 
@@ -212,16 +194,13 @@ mod test {
         let payload = FlightItineraryRequest {
             flight_paths: vec![
                 ["MYS".to_string(), "SGP".to_string()],
-                ["GBB".to_string(), "BKK".to_string()], 
+                ["GBB".to_string(), "BKK".to_string()],
                 ["GSO".to_string(), "MYS".to_string()],
-                ["BKK".to_string(), "GSO".to_string()]
-            ]
+                ["BKK".to_string(), "GSO".to_string()],
+            ],
         };
         let result = service.calculate(payload).await?;
-        assert_eq!(
-            result.itinerary,
-            vec!["GBB".to_string(), "SGP".to_string()]
-        );
+        assert_eq!(result.itinerary, vec!["GBB".to_string(), "SGP".to_string()]);
         Ok(())
     }
 
@@ -231,16 +210,13 @@ mod test {
         let payload = FlightItineraryRequest {
             flight_paths: vec![
                 ["MYS".to_string(), "SGP".to_string()],
-                ["MYS".to_string(), "BKK".to_string()], 
+                ["MYS".to_string(), "BKK".to_string()],
                 ["SGP".to_string(), "BKK".to_string()],
-                ["BKK".to_string(), "MYS".to_string()]
-            ]
+                ["BKK".to_string(), "MYS".to_string()],
+            ],
         };
         let result = service.calculate(payload).await?;
-        assert_eq!(
-            result.itinerary,
-            vec!["MYS".to_string(), "BKK".to_string()]
-        );
+        assert_eq!(result.itinerary, vec!["MYS".to_string(), "BKK".to_string()]);
         Ok(())
     }
 
@@ -250,12 +226,12 @@ mod test {
         let payload = FlightItineraryRequest {
             flight_paths: vec![
                 ["MYS".to_string(), "SGP".to_string()],
-                ["MYS".to_string(), "BKK".to_string()], 
+                ["MYS".to_string(), "BKK".to_string()],
                 ["SGP".to_string(), "BKK".to_string()],
                 ["BKK".to_string(), "MYS".to_string()],
                 ["SGP".to_string(), "MYS".to_string()],
                 ["REN".to_string(), "BKK".to_string()],
-            ]
+            ],
         };
         let result = service.calculate(payload).await;
         println!("{:?}", result);
@@ -272,12 +248,12 @@ mod test {
         let payload = FlightItineraryRequest {
             flight_paths: vec![
                 ["MYS".to_string(), "SGP".to_string()],
-                ["MYS".to_string(), "BKK".to_string()], 
+                ["MYS".to_string(), "BKK".to_string()],
                 ["SGP".to_string(), "BKK".to_string()],
                 ["BKK".to_string(), "MYS".to_string()],
                 ["SGP".to_string(), "MYS".to_string()],
                 ["REN".to_string(), "BEN".to_string()],
-            ]
+            ],
         };
         let result = service.calculate(payload).await;
         println!("{:?}", result);
@@ -296,7 +272,7 @@ mod test {
                 ["MYS".to_string(), "SGP".to_string()],
                 ["SGP".to_string(), "BKK".to_string()],
                 ["BKK".to_string(), "MYS".to_string()],
-            ]
+            ],
         };
         let result = service.calculate(payload).await;
         println!("{:?}", result);
